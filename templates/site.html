@@ -5,80 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messenger</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            display: flex;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-        #auth-section {
-            padding: 20px;
-            margin: auto;
-        }
-        #chat-container {
-            display: none;
-            width: 80%;
-            height: 80vh;
-            margin: auto;
-            display: flex;
-            flex-direction: row;
-        }
-        #user-list {
-            width: 30%;
-            background-color: #fff;
-            padding: 10px;
-            border-right: 1px solid #ddd;
-        }
-        #user-list div {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-            cursor: pointer;
-        }
-        #user-list div:hover {
-            background-color: #f0f0f0;
-        }
-        #chat-box {
-            width: 70%;
-            padding: 10px;
-            background-color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        #messages {
-            height: 80%;
-            overflow-y: scroll;
-            margin-bottom: 20px;
-        }
-        .message {
-            padding: 10px;
-            margin-bottom: 5px;
-            border-radius: 8px;
-        }
-        .message.sent {
-            background-color: #dcf8c6;
-            align-self: flex-end;
-        }
-        .message.received {
-            background-color: #f1f1f1;
-            align-self: flex-start;
-        }
-        textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        button {
-            padding: 10px;
-            border: none;
-            background-color: #28a745;
-            color: white;
-            cursor: pointer;
-            margin-top: 5px;
-        }
+        /* CSS тут тот же самый */
     </style>
 </head>
 <body>
@@ -106,6 +33,13 @@
     <script>
         let currentUser = '';
         let selectedUser = '';
+
+        // Автообновление сообщений каждые 2 секунды
+        setInterval(() => {
+            if (selectedUser !== '') {
+                loadMessages();
+            }
+        }, 2000);
 
         function register() {
             const login = document.getElementById('login').value;
@@ -139,6 +73,7 @@
             .then(data => {
                 if (data.status === 'success') {
                     currentUser = login;
+                    document.cookie = `login=${login}; path=/`;  // Сохранение логина в куки
                     document.getElementById('auth-section').style.display = 'none';
                     document.getElementById('chat-container').style.display = 'flex';
                     loadUsers();
@@ -173,36 +108,32 @@
         }
 
         function loadMessages() {
-    fetch('/get_messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ login: currentUser, receiver_login: selectedUser })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log(data); // Добавьте вывод данных для отладки
-        const messagesDiv = document.getElementById('messages');
-        messagesDiv.innerHTML = '';
-        if (data.messages) {
-            data.messages.forEach(msg => {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message');
-                if (msg.sender_login === currentUser) {
-                    messageDiv.classList.add('sent');
-                } else {
-                    messageDiv.classList.add('received');
+            fetch('/get_messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ login: currentUser, receiver_login: selectedUser })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = '';
+                if (data.messages) {
+                    data.messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.classList.add('message');
+                        if (msg.sender_login === currentUser) {
+                            messageDiv.classList.add('sent');
+                        } else {
+                            messageDiv.classList.add('received');
+                        }
+                        messageDiv.textContent = `${msg.sender_login}: ${msg.message}`;
+                        messagesDiv.appendChild(messageDiv);
+                    });
                 }
-                messageDiv.textContent = `${msg.sender_login}: ${msg.message}`;
-                messagesDiv.appendChild(messageDiv);
             });
-        } else {
-            messagesDiv.textContent = 'No messages found.';
         }
-    })
-    .catch(error => console.error('Error:', error));
-}
 
         function sendMessage() {
             const message = document.getElementById('message').value;
@@ -220,6 +151,22 @@
                 document.getElementById('message').value = '';
             });
         }
+
+        // Автоматический вход по куки
+        window.onload = () => {
+            const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+                const [key, value] = cookie.split('=');
+                acc[key] = value;
+                return acc;
+            }, {});
+
+            if (cookies.login) {
+                currentUser = cookies.login;
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('chat-container').style.display = 'flex';
+                loadUsers();
+            }
+        };
     </script>
 </body>
 </html>

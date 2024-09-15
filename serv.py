@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 import sqlite3
 from hashlib import sha256
 
@@ -11,22 +11,16 @@ def connect_db():
 # Создание таблиц пользователей и сообщений
 def init_db():
     with connect_db() as db:
-        db.execute('''
-            CREATE TABLE IF NOT EXISTS users (
+        db.execute('''CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 login TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL
-            )
-        ''')
-        db.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
+                password_hash TEXT NOT NULL)''')
+        db.execute('''CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sender_login TEXT NOT NULL,
                 receiver_login TEXT NOT NULL,
                 message TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
 
 # Главная страница — рендеринг сайта site.html
 @app.route('/')
@@ -59,7 +53,10 @@ def login():
     with connect_db() as db:
         user = db.execute('SELECT * FROM users WHERE login = ? AND password_hash = ?', (login, password_hash)).fetchone()
         if user:
-            return jsonify({"status": "success", "message": "Login successful"})
+            # Создание ответа с установкой куки
+            response = make_response(jsonify({"status": "success", "message": "Login successful"}))
+            response.set_cookie('login', login)
+            return response
         else:
             return jsonify({"status": "error", "message": "Invalid login or password"})
 
@@ -99,7 +96,6 @@ def get_messages():
             ORDER BY timestamp''', 
             (login, receiver_login, receiver_login, login)).fetchall()
 
-    # Преобразуем результат в список словарей для JSON-ответа
     formatted_messages = [{'sender_login': msg[0], 'message': msg[1], 'timestamp': msg[2]} for msg in messages]
     return jsonify({"status": "success", "messages": formatted_messages})
 

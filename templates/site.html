@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        #auth-section {
+            padding: 20px;
+            margin: auto;
+        }
+        #chat-container {
+            display: none;
+            width: 80%;
+            height: 80vh;
+            margin: auto;
+            display: flex;
+            flex-direction: row;
+        }
+        #user-list {
+            width: 30%;
+            background-color: #fff;
+            padding: 10px;
+            border-right: 1px solid #ddd;
+        }
+        #user-list div {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+        #user-list div:hover {
+            background-color: #f0f0f0;
+        }
+        #chat-box {
+            width: 70%;
+            padding: 10px;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        #messages {
+            height: 80%;
+            overflow-y: scroll;
+            margin-bottom: 20px;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+        }
+        .message.sent {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+        }
+        .message.received {
+            background-color: #f1f1f1;
+            align-self: flex-start;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-section">
+        <h3>Register or Login</h3>
+        <input type="text" id="login" placeholder="Login">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="register()">Register</button>
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div id="chat-container">
+        <div id="user-list">
+            <h3>Users</h3>
+            <div id="users"></div>
+        </div>
+
+        <div id="chat-box">
+            <div id="messages"></div>
+            <textarea id="message" rows="2" placeholder="Type your message here..."></textarea>
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = '';
+        let selectedUser = '';
+
+        function register() {
+            const login = document.getElementById('login').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ login, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+            });
+        }
+
+        function login() {
+            const login = document.getElementById('login').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ login, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    currentUser = login;
+                    document.getElementById('auth-section').style.display = 'none';
+                    document.getElementById('chat-container').style.display = 'flex';
+                    loadUsers();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function loadUsers() {
+            fetch('/get_users', {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const usersDiv = document.getElementById('users');
+                usersDiv.innerHTML = '';
+                data.users.forEach(user => {
+                    if (user !== currentUser) {
+                        const userDiv = document.createElement('div');
+                        userDiv.textContent = user;
+                        userDiv.onclick = () => selectUser(user);
+                        usersDiv.appendChild(userDiv);
+                    }
+                });
+            });
+        }
+
+        function selectUser(user) {
+            selectedUser = user;
+            loadMessages();
+        }
+
+        function loadMessages() {
+    fetch('/get_messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ login: currentUser, receiver_login: selectedUser })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data); // Добавьте вывод данных для отладки
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '';
+        if (data.messages) {
+            data.messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                if (msg.sender_login === currentUser) {
+                    messageDiv.classList.add('sent');
+                } else {
+                    messageDiv.classList.add('received');
+                }
+                messageDiv.textContent = `${msg.sender_login}: ${msg.message}`;
+                messagesDiv.appendChild(messageDiv);
+            });
+        } else {
+            messagesDiv.textContent = 'No messages found.';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+        function sendMessage() {
+            const message = document.getElementById('message').value;
+
+            fetch('/send_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sender_login: currentUser, receiver_login: selectedUser, message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadMessages();
+                document.getElementById('message').value = '';
+            });
+        }
+    </script>
+</body>
+</html>

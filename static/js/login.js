@@ -14,7 +14,7 @@ function register() {
     .then(data => {
         alert(data.message);
         if (data.status === 'success') {
-            login();
+            login();  // После успешной регистрации сразу выполнить вход
         }
     })
     .catch(error => {
@@ -38,9 +38,8 @@ function login() {
     .then(data => {
         if (data.status === 'success') {
             document.cookie = `login=${login}; path=/`;
-            fadeOutAuth();
             setTimeout(() => {
-                window.location.href = '/chat';
+                window.location.href = '/chat';  // Переход на страницу чата
             }, 1000);
         } else {
             alert(data.message);
@@ -66,7 +65,6 @@ function loginWithCookie() {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                fadeOutAuth();
                 setTimeout(() => {
                     window.location.href = '/chat';
                 }, 1000);
@@ -80,9 +78,4 @@ function loginWithCookie() {
     } else {
         alert('Куки не найдены. Пожалуйста, войдите вручную.');
     }
-}
-
-function fadeOutAuth() {
-    const auth = document.getElementById('auth-section');
-    auth.classList.add('hidden');
 }

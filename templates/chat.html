@@ -22,13 +22,10 @@
             <h3>Чат</h3>
             <div id="messages"></div>
             <textarea id="message" placeholder="Введите сообщение..."></textarea>
+            <input type="file" id="file-input" />
             <button onclick="sendMessage()">Отправить</button>
         </div>
     </div>
-    <div id="search-overlay"></div>
-    <script>
-        const currentUser = "{{ login }}";
-    </script>
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 </body>
 </html>
